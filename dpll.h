@@ -6,21 +6,23 @@
 #include <string>
 #include <vector>
 #include <sstream>
-
+#include <unordered_map>
 
 class Clause {
     public:
-        std::vector<int> literals; // List of literals in the clause
+        std::unordered_map<int,int> literals; // List of literals in the clause
     
         void addLiteral(int literal) {
-            literals.push_back(literal);
+            // literals.push_back(literal);
+            literals[literal] = 1;
         }
     
         void printClause() const {
-            for (int literal : literals) {
-                std::cout << literal << " ";
+            for (auto & literal: literals) {
+                std::cout << literal.first << " ";
             }
-            std::cout << "0" << std::endl; // End of clause
+            std::cout<<std::endl;
+            // std::cout << "0" << std::endl; // End of clause
         }
     };
 
