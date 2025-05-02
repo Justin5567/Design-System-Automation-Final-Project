@@ -8,10 +8,13 @@
 #include <sstream>
 #include <unordered_map>
 
+
 class Clause {
     public:
         std::unordered_map<int,int> literals; // List of literals in the clause
-    
+        int watch1;
+        int watch2;
+        
         void addLiteral(int literal) {
             // literals.push_back(literal);
             literals[literal] = 1;
