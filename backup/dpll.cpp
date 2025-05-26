@@ -307,9 +307,9 @@ bool dpll_watchLiterals(std::vector<Clause>& clauses, std::unordered_map<int, bo
 }
 
 
-int main(int argc, char *argv[]) {
-    std::string inFile = argv[1];
-    std::ifstream file(inFile);
+int main() {
+    std::ifstream file("./uf20-91/uf20-01.cnf"); // Open the file named "uf20-91"
+    // std::ifstream file("./test.cnf"); // unsat test
     if (!file) { 
         std::cerr << "Error: Could not open the file 'uf20-91'." << std::endl;
         return 1;
@@ -363,8 +363,8 @@ int main(int argc, char *argv[]) {
 
 
     bool ans = false;
-    ans = dpll(clauses,assignment);
-    // ans = dpll_watchLiterals(clauses,assignment, watch_literals);
+    // ans = dpll(clauses,assignment);
+    ans = dpll_watchLiterals(clauses,assignment, watch_literals);
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
 

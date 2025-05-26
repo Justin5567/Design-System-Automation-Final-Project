@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "dpll.h"
 #include <chrono>
+#include <iomanip>
 int iter = 0;
 
 // check if there only consist positive or negative literal in all clauses
@@ -264,6 +265,7 @@ bool dpll_watchLiterals(std::vector<Clause>& clauses, std::unordered_map<int, bo
 
 
     int literal = chooseLiteral_watchLiteral(clauses,assignment);
+    // std::cout<<"pirck lit: "<<literal<<std::endl;
     if(literal==0) return false; // no more literal can be picked
     
     std::vector<Clause> copy1 = clauses;
@@ -292,96 +294,104 @@ bool dpll_watchLiterals(std::vector<Clause>& clauses, std::unordered_map<int, bo
             watch_copy2[clause.watch2].push_back(&clause);
         }
     }
-
+    // std::cout<<"enter left"<<std::endl;
     if(unitPropagate_watchLiterals(copy1, literal, assignment_copy1, watch_copy1) && dpll_watchLiterals(copy1, assignment_copy1,watch_copy1)) {
         assignment = std::move(assignment_copy1);
         return true;
     }
+    // std::cout<<"exit left"<<std::endl;
+    // std::cout<<"enter right"<<std::endl;
     if(unitPropagate_watchLiterals(copy2, -literal, assignment_copy2, watch_copy2) && dpll_watchLiterals(copy2, assignment_copy2, watch_copy2)) {
         assignment = std::move(assignment_copy2);
+        
         return true;
     }
+    // std::cout<<"exit right"<<std::endl;
     
     return false;
 
 }
 
 
-int main(int argc, char *argv[]) {
-    std::string inFile = argv[1];
-    std::ifstream file(inFile);
-    if (!file) { 
-        std::cerr << "Error: Could not open the file 'uf20-91'." << std::endl;
-        return 1;
-    }
+int main() {
+    using namespace std::chrono;
 
-    std::vector<Clause> clauses; 
-    std::string line;
+    for (int i = 1; i <= 1000; ++i) {
+        std::ostringstream filename_stream;
+        if(i<10){
+            filename_stream << "./uuf50-218/UUF50.218.1000/uuf50-" << std::setw(2) << std::setfill('0') << i << ".cnf";
+        }
+        else if(i<100){
+            filename_stream << "./uuf50-218/UUF50.218.1000/uuf50-" << std::setw(3) << std::setfill('0') << i << ".cnf";
+        }
+        else{
+            filename_stream << "./uuf50-218/UUF50.218.1000/uuf50-" << std::setw(4) << std::setfill('0') << i << ".cnf";
+        }
+        
+        
+        std::string filename = filename_stream.str();
 
-    while (std::getline(file, line)) { // Read the file line by line
-        if (line.empty() || line[0] == 'c' || line[0] == 'p' || line[0] == '%' || line[0] == '0') {
-            continue;
+        std::ifstream file(filename);
+        if (!file) { 
+            std::cerr << "Error: Could not open file '" << filename << "'." << std::endl;
+            continue; // skip to next file
         }
 
-        std::istringstream iss(line);
-        Clause clause;
-        int literal;
+        std::vector<Clause> clauses; 
+        std::string line;
 
-        while (iss >> literal) {
-            if (literal == 0) {
-                break; // End of clause
+        while (std::getline(file, line)) {
+            if (line.empty() || line[0] == 'c' || line[0] == 'p' || line[0] == '%' || line[0] == '0') {
+                continue;
             }
-            clause.addLiteral(literal);
+
+            std::istringstream iss(line);
+            Clause clause;
+            int literal;
+            while (iss >> literal) {
+                if (literal == 0) break;
+                clause.addLiteral(literal);
+            }
+            clauses.push_back(clause); 
         }
-        clauses.push_back(clause); 
-    }
 
-    file.close(); // Close the file
+        file.close();
 
-
-    using namespace std:: chrono;
-    auto start = high_resolution_clock::now();
-
-    std::unordered_map<int, bool> assignment;
-    std::unordered_map<int, std::vector<Clause*>> watch_literals;
-    
-    // save the first two element into watch literals
-    for(auto& clause: clauses){
-        auto it = clause.literals.begin();
-        if(clause.literals.size()>=1){
-            clause.watch1 = it->first;
-            watch_literals[it->first].push_back(&clause);
-            // std::cout<<" "<<it->first;
-            it++;
+        std::unordered_map<int, bool> assignment;
+        std::unordered_map<int, std::vector<Clause*>> watch_literals;
+        
+        for(auto& clause: clauses){
+            auto it = clause.literals.begin();
+            if(clause.literals.size() >= 1){
+                clause.watch1 = it->first;
+                watch_literals[it->first].push_back(&clause);
+                ++it;
+            }
+            if(it != clause.literals.end()){
+                clause.watch2 = it->first;
+                watch_literals[it->first].push_back(&clause);
+            }
         }
-        if(it!=clause.literals.end()){
-            clause.watch2 = it->first;
-            watch_literals[it->first].push_back(&clause);
-            // std::cout<<" "<<it->first<<std::endl;
+
+        auto start = high_resolution_clock::now();
+        bool ans = dpll_watchLiterals(clauses, assignment, watch_literals);
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<microseconds>(stop - start);
+
+        std::vector<std::pair<int, bool>> sorted_assign(assignment.begin(), assignment.end());
+        std::sort(sorted_assign.begin(), sorted_assign.end());
+
+        std::cout << "File: " << filename << " => ";
+        if (ans) {
+            std::cout << "SAT | ";
+            for (const auto& [var, value] : sorted_assign) {
+                std::cout << var << "=" << value << " ";
+            }
+        } else {
+            std::cout << "UNSAT";
         }
+        std::cout << "| Time: " << duration.count() << "us" << std::endl;
     }
-
-
-    bool ans = false;
-    ans = dpll(clauses,assignment);
-    // ans = dpll_watchLiterals(clauses,assignment, watch_literals);
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(stop - start);
-
-    std::vector<std::pair<int, bool>> sorted_assign(assignment.begin(), assignment.end());
-
-    std::sort(sorted_assign.begin(), sorted_assign.end());
-
-    if(ans){
-        std::cout<<"SAT"<<std::endl;
-        for (const auto& [var, value] : sorted_assign) {
-            std::cout << var << "=" << value<<" ";
-        }
-    }
-    else{
-        std::cout<<"UNSAT"<<std::endl;
-    }
-    std::cout << "\nExecution Time: " << duration.count() << " microseconds" << std::endl;
 
     return 0;
 }
